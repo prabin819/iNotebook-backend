@@ -66,15 +66,17 @@ router.post(
   ],
   async (req, res) => {
     const result = validationResult(req);
+    let success=false;
+    const { email, password } = req.body;
     if (result.isEmpty()) {
       try {
         let user1 = await user.findOne({ email: req.body.email });
         if (user1) {
-          const { email, password } = req.body;
           const passwordCheck = await bcrypt.compare(password, user1.password);
 
           if (!passwordCheck) {
-            return res.status(500).send("Sorry incorrect credentials.");
+            success = false;
+            return res.status(400).json({success, error: "Sorry incorrect credentials."});
           } else {
             const data = {
               user: {
@@ -83,18 +85,20 @@ router.post(
             };
             //console.log(user1.id);
             const authToken = jwt.sign(data, secret);
-            return res.json({ authToken });
+            success = true;
+            return res.json({ success, authToken });
           }
         } else {
-          return res.status(500).send("Sorry incorrect credentials.");
+          success = false;
+          return res.status(500).json({success, error: "Sorry incorrect credentials."});
         }
       } catch (error) {
         console.error(error.message);
         res.status(500).send("Some error occured.");
       }
     }
-
-    res.send({ errors: result.array() });
+    success = false;
+    res.send({ success, errors: result.array() });
   }
 );
 
