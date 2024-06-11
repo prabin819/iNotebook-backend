@@ -17,6 +17,7 @@ router.post(
     }),
   ],
   async (req, res) => {
+    let success = false;
     const result = validationResult(req);
     if (result.isEmpty()) {
       // const user1 = user(req.body);                      //sync type
@@ -32,28 +33,40 @@ router.post(
       try {
         let user1 = await user.findOne({ email: req.body.email });
         if (user1) {
+          success = false;
+          console.log(success);
           return res
             .status(400)
-            .json({ error: "Sorry a user with this email already exists." });
+            .json({ success, error: "Sorry a user with this email already exists." });
         }
 
         const salt = await bcrypt.genSalt(10);
         console.log(salt);
         const secPass = await bcrypt.hash(req.body.password, salt);
 
-        await user.create({
+        user1 = await user.create({
           name: req.body.name,
           password: secPass,
           email: req.body.email,
         });
-        return res.status(200).json({ done: "user created successfully." });
+
+        const data = {
+          user:{
+            id: user1.id
+          }
+        }
+
+        const authToken = jwt.sign(data, secret);
+        success = true;
+        return res.status(200).json({ success, authToken });
       } catch (error) {
         console.error(error.message);
-        res.status(500).send("Some error occured.");
+        success = false;
+        res.status(500).send({success, error:"Some error occured."});
       }
     }
 
-    res.send({ errors: result.array() });
+    res.send({ success: "false", errors: result.array() });
   }
 );
 
